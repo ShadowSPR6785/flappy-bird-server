@@ -294,4 +294,4 @@ if __name__ == "__main__":
     os.makedirs(os.path.join(BASE, "static"), exist_ok=True)
     print("\n🐦 Flappy Bird Server — Versão Completa")
     print("   Acede em: http://localhost:5000\n")
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    SERVIDOR_URL = "https://web-production-2b9c8.up.railway.app"
