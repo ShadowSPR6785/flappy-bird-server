@@ -259,6 +259,28 @@ def torneio_leaderboard():
     return jsonify({"ranking":ranking,"minha_pos":minha_pos,
                     "data":hoje,"total":len(ranking)})
 
+# ── SAVE / LOAD DE DADOS DO JOGO ─────────────────────────────
+@app.route("/api/save", methods=["POST"])
+@login_required
+def save_dados():
+    d     = request.get_json(force=True)
+    uname = session["username"]
+    # guardar todos os dados do jogo no perfil do utilizador
+    users().update_one({"username": uname}, {"$set": {
+        "save_dados": d,
+        "save_atualizado": datetime.datetime.utcnow().isoformat()
+    }})
+    return jsonify({"ok": True})
+
+@app.route("/api/load")
+@login_required
+def load_dados():
+    uname = session["username"]
+    u     = users().find_one({"username": uname}, {"_id": 0, "save_dados": 1})
+    if not u or "save_dados" not in u:
+        return jsonify({"ok": False, "dados": None})
+    return jsonify({"ok": True, "dados": u["save_dados"]})
+
 if __name__=="__main__":
     print("\n🐦 Flappy Bird Server (MongoDB)")
     print("   Acede em: http://localhost:5000\n")
