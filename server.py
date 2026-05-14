@@ -1,31 +1,37 @@
 """
-Flappy Bird – Servidor com MongoDB Atlas (dados persistentes)
+Flappy Bird – Servidor com MongoDB (dados persistentes)
 """
 import os, hashlib, datetime
 from functools import wraps
 from flask import Flask, request, jsonify, session, send_from_directory
-from pymongo import MongoClient
-from bson import ObjectId
 
 BASE   = os.path.dirname(os.path.abspath(__file__))
 app    = Flask(__name__, static_folder=os.path.join(BASE,"static"))
 app.secret_key = "flappy_bird_secret_2024_xk9"
 
 # ── MONGODB ───────────────────────────────────────────────────
-MONGO_URI = os.environ.get("MONGO_URI", "")
-_client   = None
-_db       = None
+# Railway usa MONGO_URL, Atlas usa MONGO_URI
+MONGO_URI = (os.environ.get("MONGO_URI") or
+             os.environ.get("MONGO_URL") or
+             os.environ.get("MONGODB_URL") or "")
+
+_client = None
+_db     = None
 
 def get_db():
     global _client, _db
     if _db is None:
-        _client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
-        _db     = _client["flappy_bird"]
+        from pymongo import MongoClient
+        _client = MongoClient(MONGO_URI,
+                              serverSelectionTimeoutMS=8000,
+                              connectTimeoutMS=8000,
+                              socketTimeoutMS=8000)
+        _db = _client["flappy_bird"]
     return _db
 
-def users():     return get_db()["utilizadores"]
-def partidas():  return get_db()["partidas"]
-def amizades():  return get_db()["amizades"]
+def users():    return get_db()["utilizadores"]
+def partidas(): return get_db()["partidas"]
+def amizades(): return get_db()["amizades"]
 
 def hash_pw(p): return hashlib.sha256(p.encode()).hexdigest()
 
@@ -38,6 +44,13 @@ def login_required(f):
     return dec
 
 # ── ESTÁTICOS ─────────────────────────────────────────────────
+@app.route("/api/health")
+def health():
+    try:
+        get_db().command("ping")
+        return jsonify({"ok": True, "db": "connected"})
+    except Exception as e:
+        return jsonify({"ok": False, "erro": str(e)}), 500
 @app.route("/")
 def index():
     return send_from_directory(os.path.join(BASE,"static"),"index.html")
