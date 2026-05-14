@@ -22,7 +22,20 @@ def get_db():
     global _client, _db
     if _db is None:
         from pymongo import MongoClient
-        _client = MongoClient(MONGO_URI,
+        from urllib.parse import quote_plus, urlparse, urlunparse
+        uri = MONGO_URI
+        try:
+            # corrigir caracteres especiais na password automaticamente
+            p = urlparse(uri)
+            if p.username and p.password:
+                user = quote_plus(p.username)
+                pw   = quote_plus(p.password)
+                host = p.hostname
+                port = f":{p.port}" if p.port else ""
+                uri  = f"{p.scheme}://{user}:{pw}@{host}{port}{p.path}"
+                if p.query: uri += f"?{p.query}"
+        except: pass
+        _client = MongoClient(uri,
                               serverSelectionTimeoutMS=8000,
                               connectTimeoutMS=8000,
                               socketTimeoutMS=8000)
