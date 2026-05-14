@@ -285,6 +285,23 @@ def torneio_leaderboard():
     return jsonify({"ranking":ranking,"minha_pos":minha_pos,
                     "data":hoje,"total":len(ranking)})
 
+# ── DELETAR CONTA ─────────────────────────────────────────────
+@app.route("/api/deletar_conta", methods=["POST"])
+@login_required
+def deletar_conta():
+    d     = request.get_json(force=True)
+    pw    = d.get("password") or ""
+    uname = session["username"]
+    u     = users().find_one({"username": uname})
+    if not u or u["password_hash"] != hash_pw(pw):
+        return jsonify({"erro": "Password incorreta"}), 401
+    users().delete_one({"username": uname})
+    partidas().delete_many({"username": uname})
+    amizades().delete_one({"username": uname})
+    amizades().update_many({}, {"$pull": {"amigos": uname}})
+    session.clear()
+    return jsonify({"ok": True})
+
 # ── SAVE / LOAD DE DADOS DO JOGO ─────────────────────────────
 @app.route("/api/save", methods=["POST"])
 @login_required
