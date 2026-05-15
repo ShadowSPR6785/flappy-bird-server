@@ -204,6 +204,8 @@ def estatisticas():
                     "media_placar":media,"modos_jogados":modos_c})
 
 # ── AMIGOS ────────────────────────────────────────────────────
+def pedidos(): return get_db()["pedidos_amizade"]
+
 @app.route("/api/amigos")
 @login_required
 def listar_amigos():
@@ -217,17 +219,85 @@ def listar_amigos():
     lista.sort(key=lambda x:x.get("melhor_placar",0),reverse=True)
     return jsonify({"amigos":lista})
 
-@app.route("/api/amigos/adicionar", methods=["POST"])
+@app.route("/api/amigos/pedidos")
 @login_required
-def adicionar_amigo():
+def listar_pedidos():
+    uname = session["username"]
+    # pedidos recebidos pendentes
+    recebidos = list(pedidos().find(
+        {"para":uname,"estado":"pendente"},{"_id":0}
+    ))
+    for p in recebidos:
+        u=users().find_one({"username":p["de"]},{"_id":0,"display":1,"melhor_placar":1,"nivel":1})
+        if u:
+            p["display"]=u.get("display",p["de"])
+            p["melhor_placar"]=u.get("melhor_placar",0)
+            p["nivel"]=u.get("nivel",1)
+    # pedidos enviados pendentes
+    enviados = list(pedidos().find(
+        {"de":uname,"estado":"pendente"},{"_id":0}
+    ))
+    return jsonify({"recebidos":recebidos,"enviados":enviados})
+
+@app.route("/api/amigos/pedir", methods=["POST"])
+@login_required
+def pedir_amizade():
     alvo  = (request.get_json(force=True).get("username") or "").strip().lower()
     uname = session["username"]
     if alvo==uname: return jsonify({"erro":"Não podes adicionar-te a ti próprio"}),400
     if not users().find_one({"username":alvo}): return jsonify({"erro":"Utilizador não encontrado"}),404
-    amizades().update_one({"username":uname},{"$addToSet":{"amigos":alvo}},upsert=True)
-    amizades().update_one({"username":alvo}, {"$addToSet":{"amigos":uname}},upsert=True)
+    # já são amigos?
+    am_doc=amizades().find_one({"username":uname}) or {}
+    if alvo in am_doc.get("amigos",[]): return jsonify({"erro":"Já são amigos"}),400
+    # já existe pedido pendente?
+    existente=pedidos().find_one({"de":uname,"para":alvo,"estado":"pendente"})
+    if existente: return jsonify({"erro":"Pedido já enviado"}),400
+    # o outro já enviou pedido? aceitar automaticamente
+    inverso=pedidos().find_one({"de":alvo,"para":uname,"estado":"pendente"})
+    if inverso:
+        pedidos().update_one({"_id":inverso["_id"]},{"$set":{"estado":"aceite"}})
+        amizades().update_one({"username":uname},{"$addToSet":{"amigos":alvo}},upsert=True)
+        amizades().update_one({"username":alvo},{"$addToSet":{"amigos":uname}},upsert=True)
+        u=users().find_one({"username":alvo},{"_id":0,"display":1})
+        return jsonify({"ok":True,"aceite_automatico":True,"display":u["display"] if u else alvo})
+    pedidos().insert_one({
+        "de":uname,"para":alvo,"estado":"pendente",
+        "data":datetime.datetime.utcnow().isoformat()
+    })
     u=users().find_one({"username":alvo},{"_id":0,"display":1})
     return jsonify({"ok":True,"display":u["display"] if u else alvo})
+
+@app.route("/api/amigos/responder", methods=["POST"])
+@login_required
+def responder_pedido():
+    d      = request.get_json(force=True)
+    de     = (d.get("de") or "").strip().lower()
+    aceite = bool(d.get("aceite"))
+    uname  = session["username"]
+    p = pedidos().find_one({"de":de,"para":uname,"estado":"pendente"})
+    if not p: return jsonify({"erro":"Pedido não encontrado"}),404
+    estado = "aceite" if aceite else "recusado"
+    pedidos().update_one({"_id":p["_id"]},{"$set":{"estado":estado}})
+    if aceite:
+        amizades().update_one({"username":uname},{"$addToSet":{"amigos":de}},upsert=True)
+        amizades().update_one({"username":de},{"$addToSet":{"amigos":uname}},upsert=True)
+    return jsonify({"ok":True,"aceite":aceite})
+
+@app.route("/api/amigos/adicionar", methods=["POST"])
+@login_required
+def adicionar_amigo():
+    # mantido por compatibilidade — redireciona para pedir
+    alvo  = (request.get_json(force=True).get("username") or "").strip().lower()
+    uname = session["username"]
+    if alvo==uname: return jsonify({"erro":"Não podes adicionar-te a ti próprio"}),400
+    if not users().find_one({"username":alvo}): return jsonify({"erro":"Utilizador não encontrado"}),404
+    am_doc=amizades().find_one({"username":uname}) or {}
+    if alvo in am_doc.get("amigos",[]): return jsonify({"erro":"Já são amigos"}),400
+    existente=pedidos().find_one({"de":uname,"para":alvo,"estado":"pendente"})
+    if existente: return jsonify({"erro":"Pedido já enviado"}),400
+    pedidos().insert_one({"de":uname,"para":alvo,"estado":"pendente","data":datetime.datetime.utcnow().isoformat()})
+    u=users().find_one({"username":alvo},{"_id":0,"display":1})
+    return jsonify({"ok":True,"pedido_enviado":True,"display":u["display"] if u else alvo})
 
 @app.route("/api/amigos/remover", methods=["POST"])
 @login_required
