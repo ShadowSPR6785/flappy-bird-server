@@ -121,6 +121,26 @@ header{display:flex;align-items:center;justify-content:space-between;padding:14p
 .friend-stats{font-size:12px;color:var(--muted);margin-top:2px}
 .friend-score{font-family:'Press Start 2P',monospace;font-size:13px;color:var(--gold)}
 .search-result{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:8px}
+/* NOTIFICAÇÃO PEDIDOS */
+.notif-badge{display:inline-flex;align-items:center;justify-content:center;background:var(--red);color:#fff;border-radius:999px;font-size:10px;font-weight:700;min-width:18px;height:18px;padding:0 5px;margin-left:6px;animation:pulse-badge .8s ease-in-out infinite alternate}
+@keyframes pulse-badge{from{transform:scale(1)}to{transform:scale(1.15)}}
+.pedido-card{display:flex;align-items:center;gap:14px;background:rgba(88,166,255,.06);border:1px solid rgba(88,166,255,.25);border-radius:var(--radius);padding:14px 18px;margin-bottom:10px}
+.pedido-card .friend-avatar{background:linear-gradient(135deg,var(--accent),#1a6bcc)}
+.notif-toast{position:fixed;top:80px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:10px;pointer-events:none}
+.toast{background:var(--surface);border:1px solid rgba(88,166,255,.4);border-radius:12px;padding:16px 20px;box-shadow:0 8px 32px rgba(0,0,0,.5);min-width:300px;max-width:380px;pointer-events:all;animation:slideIn .3s ease}
+@keyframes slideIn{from{transform:translateX(120%);opacity:0}to{transform:none;opacity:1}}
+.toast-title{font-weight:700;font-size:14px;color:var(--accent);margin-bottom:4px}
+.toast-body{font-size:13px;color:var(--muted);margin-bottom:12px}
+.toast-actions{display:flex;gap:8px}
+.btn-accept{background:var(--green);color:#fff;border:none;padding:7px 16px;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn-accept:hover{filter:brightness(1.1)}
+.btn-decline{background:transparent;color:var(--muted);border:1px solid var(--border);padding:7px 16px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.btn-decline:hover{background:var(--surface);color:var(--text)}
+/* SUB-ABAS AMIGOS */
+.sub-tab{padding:8px 18px;border:none;background:transparent;color:var(--muted);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all .18s;margin-bottom:-1px;border-radius:6px 6px 0 0}
+.sub-tab.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(88,166,255,.06)}
+.sub-tab:hover:not(.active){color:var(--text);background:rgba(255,255,255,.04)}
+.pedido-enviado-card{display:flex;align-items:center;gap:14px;background:rgba(244,196,48,.04);border:1px solid rgba(244,196,48,.18);border-radius:var(--radius);padding:14px 18px;margin-bottom:10px}
 /* TORNEIO */
 .torneio-card{background:linear-gradient(135deg,rgba(244,196,48,.08),rgba(91,168,60,.06));border:1px solid rgba(244,196,48,.25);border-radius:16px;padding:24px;margin-bottom:24px}
 .torneio-title{font-family:'Press Start 2P',monospace;font-size:11px;color:var(--gold);margin-bottom:8px}
@@ -241,13 +261,34 @@ header{display:flex;align-items:center;justify-content:space-between;padding:14p
 
   <!-- AMIGOS -->
   <div class="page" id="tab-amigos">
-    <div class="section-title">Procurar jogadores</div>
-    <div style="display:flex;gap:10px;margin-bottom:20px">
-      <input class="form-input" id="search-user" type="text" placeholder="Procura por username..." style="max-width:300px" oninput="procurarUtilizadores()">
+    <!-- Sub-abas -->
+    <div class="sub-tabs" style="display:flex;gap:4px;margin-bottom:22px;border-bottom:1px solid var(--border);padding-bottom:0">
+      <button class="sub-tab active" id="subtab-amigos" onclick="showSubTab('amigos')">👥 Amigos</button>
+      <button class="sub-tab" id="subtab-pendentes" onclick="showSubTab('pendentes')">⏳ Pendentes <span id="pendentes-badge" class="notif-badge" style="display:none">0</span></button>
     </div>
-    <div id="search-results" style="margin-bottom:28px"></div>
-    <div class="section-title">Os teus amigos</div>
-    <div id="amigos-list"><div class="empty-state"><div class="spinner"></div></div></div>
+
+    <!-- Painel: Amigos -->
+    <div id="subpanel-amigos">
+      <div class="section-title">Procurar jogadores</div>
+      <div style="display:flex;gap:10px;margin-bottom:20px">
+        <input class="form-input" id="search-user" type="text" placeholder="Procura por username..." style="max-width:300px" oninput="procurarUtilizadores()">
+      </div>
+      <div id="search-results" style="margin-bottom:28px"></div>
+      <div class="section-title">Os teus amigos</div>
+      <div id="amigos-list"><div class="empty-state"><div class="spinner"></div></div></div>
+    </div>
+
+    <!-- Painel: Pendentes -->
+    <div id="subpanel-pendentes" style="display:none">
+      <div class="section-title">Pedidos recebidos</div>
+      <div id="pedidos-recebidos-list" style="margin-bottom:28px">
+        <div class="empty-state"><div class="spinner"></div></div>
+      </div>
+      <div class="section-title">Pedidos enviados</div>
+      <div id="pedidos-enviados-list">
+        <div class="empty-state"><div class="spinner"></div></div>
+      </div>
+    </div>
   </div>
 
   <!-- HISTÓRICO -->
@@ -257,6 +298,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:14p
   </div>
 </div>
 </div>
+<div class="notif-toast" id="notif-toast"></div>
 
 <script>
 // ── ESTRELAS ─────────────────────────────────────────
@@ -309,6 +351,7 @@ async function doRegister(){
 }
 async function doLogout(){
   await api('/api/logout',{method:'POST'});currentUser=null;
+  clearInterval(pedidosPollingTimer);
   document.getElementById('main-view').style.display='none';
   document.getElementById('auth-view').style.display='block';
   document.getElementById('header-right').innerHTML=`<button class="btn btn-primary btn-sm" onclick="showAuth('login')">Entrar</button><button class="btn btn-ghost btn-sm" onclick="showAuth('register')">Registar</button>`;
@@ -322,6 +365,11 @@ function mostrarApp(){
   const dn=currentUser.display||currentUser.username||'?';
   document.getElementById('header-right').innerHTML=`<div class="user-chip"><div class="avatar">${dn[0].toUpperCase()}</div>${esc(dn)}</div><button class="btn btn-danger btn-sm" onclick="doLogout()">Sair</button>`;
   carregarEstatisticas();carregarLeaderboard();carregarTorneio();carregarAmigos();
+  // verificar pedidos pendentes de 30 em 30 segundos
+  _pedidosVistos=new Set();
+  verificarNovospedidos();
+  clearInterval(pedidosPollingTimer);
+  pedidosPollingTimer=setInterval(verificarNovospedidos,30000);
 }
 
 function showTab(tab){
@@ -398,7 +446,18 @@ async function carregarTorneio(){
 }
 
 // ── AMIGOS ───────────────────────────────────────────
+let pedidosPollingTimer=null;
+
+function showSubTab(name){
+  ['amigos','pendentes'].forEach(n=>{
+    document.getElementById('subtab-'+n).classList.toggle('active',n===name);
+    document.getElementById('subpanel-'+n).style.display=n===name?'block':'none';
+  });
+  if(name==='pendentes')carregarPedidos();
+}
+
 async function carregarAmigos(){
+  atualizarBadgePendentes();
   const r=await api('/api/amigos');
   const c=document.getElementById('amigos-list');
   if(!r.amigos?.length){c.innerHTML='<div class="empty-state"><div class="icon">👤</div><p>Ainda não tens amigos.<br>Procura jogadores acima!</p></div>';return;}
@@ -414,6 +473,119 @@ async function carregarAmigos(){
     </div>`).join('');
 }
 
+async function atualizarBadgePendentes(){
+  if(!currentUser)return;
+  const r=await api('/api/amigos/pedidos');
+  const recebidos=r.recebidos||[];
+  const badge=document.getElementById('pendentes-badge');
+  const tabAmigos=document.querySelector('.tab:nth-child(4)');
+  const tabBadge=tabAmigos?.querySelector('.notif-badge');
+  if(recebidos.length>0){
+    if(badge){badge.textContent=recebidos.length;badge.style.display='';}
+    if(tabAmigos&&!tabBadge)tabAmigos.innerHTML+=`<span class="notif-badge">${recebidos.length}</span>`;
+    else if(tabBadge)tabBadge.textContent=recebidos.length;
+  } else {
+    if(badge)badge.style.display='none';
+    if(tabBadge)tabBadge.remove();
+  }
+}
+
+async function carregarPedidos(){
+  const r=await api('/api/amigos/pedidos');
+  const recebidos=r.recebidos||[];
+  const enviados=r.enviados||[];
+
+  // Recebidos
+  const listaR=document.getElementById('pedidos-recebidos-list');
+  if(!recebidos.length){
+    listaR.innerHTML='<div class="empty-state"><div class="icon">📭</div><p>Sem pedidos recebidos.</p></div>';
+  } else {
+    listaR.innerHTML=recebidos.map(p=>`
+      <div class="pedido-card">
+        <div class="friend-avatar">${(p.display||p.de)[0].toUpperCase()}</div>
+        <div class="friend-info">
+          <div class="friend-name">${esc(p.display||p.de)}</div>
+          <div class="friend-stats">@${esc(p.de)} · Nível ${p.nivel||1} · ${p.melhor_placar} pts</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-accept" onclick="responderPedido('${esc(p.de)}',true)">✓ Aceitar</button>
+          <button class="btn-decline" onclick="responderPedido('${esc(p.de)}',false)">✕ Recusar</button>
+        </div>
+      </div>`).join('');
+  }
+
+  // Enviados
+  const listaE=document.getElementById('pedidos-enviados-list');
+  if(!enviados.length){
+    listaE.innerHTML='<div class="empty-state"><div class="icon">📨</div><p>Não enviaste nenhum pedido pendente.</p></div>';
+  } else {
+    listaE.innerHTML=enviados.map(p=>`
+      <div class="pedido-enviado-card">
+        <div class="friend-avatar" style="background:linear-gradient(135deg,var(--gold),var(--gold-d))">${(p.para||'?')[0].toUpperCase()}</div>
+        <div class="friend-info">
+          <div class="friend-name">@${esc(p.para)}</div>
+          <div class="friend-stats" style="color:var(--gold)">⏳ Aguarda resposta</div>
+        </div>
+      </div>`).join('');
+  }
+
+  // atualizar badge
+  const badge=document.getElementById('pendentes-badge');
+  const tabAmigos=document.querySelector('.tab:nth-child(4)');
+  const tabBadge=tabAmigos?.querySelector('.notif-badge');
+  if(recebidos.length>0){
+    if(badge){badge.textContent=recebidos.length;badge.style.display='';}
+    if(tabAmigos&&!tabBadge)tabAmigos.innerHTML+=`<span class="notif-badge">${recebidos.length}</span>`;
+    else if(tabBadge)tabBadge.textContent=recebidos.length;
+  } else {
+    if(badge)badge.style.display='none';
+    if(tabBadge)tabBadge.remove();
+  }
+}
+
+async function responderPedido(de,aceite){
+  const r=await api('/api/amigos/responder',{method:'POST',body:JSON.stringify({de,aceite})});
+  if(r.erro){alert(r.erro);return;}
+  carregarPedidos();
+  carregarAmigos();
+  carregarLeaderboard();
+}
+
+function mostrarToastPedido(p){
+  const container=document.getElementById('notif-toast');
+  const toast=document.createElement('div');
+  toast.className='toast';
+  toast.innerHTML=`
+    <div class="toast-title">👋 Pedido de amizade</div>
+    <div class="toast-body"><strong>${esc(p.display||p.de)}</strong> (@${esc(p.de)}) quer ser teu amigo!</div>
+    <div class="toast-actions">
+      <button class="btn-accept" id="ta-aceitar-${esc(p.de)}">✓ Aceitar</button>
+      <button class="btn-decline" id="ta-recusar-${esc(p.de)}">✕ Recusar</button>
+    </div>`;
+  container.appendChild(toast);
+  toast.querySelector(`#ta-aceitar-${CSS.escape(p.de)}`).onclick=async()=>{
+    await responderPedido(p.de,true);toast.remove();
+  };
+  toast.querySelector(`#ta-recusar-${CSS.escape(p.de)}`).onclick=async()=>{
+    await responderPedido(p.de,false);toast.remove();
+  };
+  setTimeout(()=>{if(toast.parentNode)toast.remove();},15000);
+}
+
+let _pedidosVistos=new Set();
+async function verificarNovospedidos(){
+  if(!currentUser)return;
+  const r=await api('/api/amigos/pedidos');
+  const recebidos=r.recebidos||[];
+  recebidos.forEach(p=>{
+    if(!_pedidosVistos.has(p.de)){
+      _pedidosVistos.add(p.de);
+      mostrarToastPedido(p);
+    }
+  });
+  atualizarBadgePendentes();
+}
+
 async function removerAmigo(username){
   if(!confirm(`Remover ${username} dos amigos?`))return;
   await api('/api/amigos/remover',{method:'POST',body:JSON.stringify({username})});
@@ -421,8 +593,16 @@ async function removerAmigo(username){
 }
 
 async function adicionarAmigo(username){
-  const r=await api('/api/amigos/adicionar',{method:'POST',body:JSON.stringify({username})});
-  if(r.erro){alert(r.erro);}else{carregarAmigos();carregarLeaderboard();document.getElementById('search-user').value='';document.getElementById('search-results').innerHTML='';}
+  const r=await api('/api/amigos/pedir',{method:'POST',body:JSON.stringify({username})});
+  if(r.erro){alert(r.erro);return;}
+  if(r.aceite_automatico){
+    alert(`${r.display} já te tinha enviado um pedido — agora são amigos! 🎉`);
+    carregarAmigos();carregarLeaderboard();
+  } else {
+    alert(`Pedido de amizade enviado a ${r.display}!`);
+  }
+  document.getElementById('search-user').value='';
+  document.getElementById('search-results').innerHTML='';
 }
 
 function procurarUtilizadores(){
@@ -433,17 +613,21 @@ function procurarUtilizadores(){
     const r=await api(`/api/utilizadores/procurar?q=${encodeURIComponent(q)}`);
     const c=document.getElementById('search-results');
     if(!r.resultados?.length){c.innerHTML='<div style="color:var(--muted);font-size:13px;padding:8px">Nenhum jogador encontrado.</div>';return;}
-    c.innerHTML=r.resultados.map(u=>`
+    c.innerHTML=r.resultados.map(u=>{
+      let btn;
+      if(u.ja_amigo) btn='<span style="font-size:12px;color:var(--muted)">Já é amigo ✓</span>';
+      else if(u.pedido_enviado) btn='<span style="font-size:12px;color:var(--accent)">Pedido enviado ⏳</span>';
+      else btn=`<button class="btn btn-primary btn-xs" onclick="adicionarAmigo('${esc(u.username)}')">+ Adicionar</button>`;
+      return `
       <div class="search-result">
         <div class="friend-avatar" style="width:34px;height:34px;font-size:14px">${(u.display||u.username)[0].toUpperCase()}</div>
         <div style="flex:1">
           <div style="font-weight:700">${esc(u.display||u.username)}</div>
           <div style="font-size:12px;color:var(--muted)">@${esc(u.username)} · ${u.melhor_placar} pts</div>
         </div>
-        ${u.ja_amigo
-          ?'<span style="font-size:12px;color:var(--muted)">Já é amigo ✓</span>'
-          :`<button class="btn btn-primary btn-xs" onclick="adicionarAmigo('${esc(u.username)}')">+ Adicionar</button>`}
-      </div>`).join('');
+        ${btn}
+      </div>`;
+    }).join('');
   },300);
 }
 
